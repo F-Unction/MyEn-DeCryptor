@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -9,69 +10,74 @@ namespace MyEnDecryptor
     {
         public static string EncryptString(string sInputString)
         {
-            try
+            var sKey = "";
+            var sIV = "";
+            if (Form1.form1.textBox3.Text == "")
             {
-                var sKey = "";
-                var sIV = "";
-                if (Form1.form1.textBox3.Text == "")
-                {
-                    sKey = DateTime.Now.ToString("yyyyMMdd");
-                    sIV = DateTime.Now.ToString("yyyyMMdd");
-                }
-                else
-                {
-                    sKey = Form1.form1.textBox3.Text;
-                    sIV = Form1.form1.textBox3.Text;
-                }
-
-                byte[] data = Encoding.UTF8.GetBytes(sInputString);
-                DESCryptoServiceProvider DES = new DESCryptoServiceProvider();
-                DES.Key = ASCIIEncoding.ASCII.GetBytes(sKey);
-                DES.IV = ASCIIEncoding.ASCII.GetBytes(sIV);
-
-                ICryptoTransform desencrypt = DES.CreateEncryptor();
-                byte[] result = desencrypt.TransformFinalBlock(data, 0, data.Length);
-                return ":MESSAGE-" + BitConverter.ToString(result);
+                sKey = DateTime.Now.ToString("yyyyMMdd");
+                sIV = DateTime.Now.ToString("yyyyMMdd");
             }
-            catch { }
+            else
+            {
+                sKey = Form1.form1.textBox3.Text;
+                sIV = Form1.form1.textBox3.Text;
+            }
+
+            var btKey = Encoding.UTF8.GetBytes(sKey);
+            var btIV = Encoding.UTF8.GetBytes(sIV);
+            DESCryptoServiceProvider des = new DESCryptoServiceProvider();
+            using (MemoryStream ms = new MemoryStream())
+            {
+                byte[] inData = Encoding.UTF8.GetBytes(sInputString);
+                try
+                {
+                    using (CryptoStream cs = new CryptoStream(ms, des.CreateEncryptor(btKey, btIV), CryptoStreamMode.Write))
+                    {
+                        cs.Write(inData, 0, inData.Length);
+                        cs.FlushFinalBlock();
+                    }
+                    return "=MeSsAgE="+Convert.ToBase64String(ms.ToArray());
+                }
+                catch { }
+            }
 
             return "Error";
         }
 
-        public static string DecryptString(string RsInputString)
+        public static string DecryptString(string RencryptedString)
         {
-            try
+
+            var sKey = "";
+            var sIV = "";
+            if (Form1.form1.textBox3.Text == "")
             {
-                var sKey = "";
-                var sIV = "";
-                if (Form1.form1.textBox3.Text == "")
-                {
-                    sKey = DateTime.Now.ToString("yyyyMMdd");
-                    sIV = DateTime.Now.ToString("yyyyMMdd");
-                }
-                else
-                {
-                    sKey = Form1.form1.textBox3.Text;
-                    sIV = Form1.form1.textBox3.Text;
-                }
-                var sInputString = RsInputString.Substring(9);
-
-                string[] sInput = sInputString.Split("-".ToCharArray());
-                byte[] data = new byte[sInput.Length];
-                for (int i = 0; i < sInput.Length; i++)
-                {
-                    data[i] = byte.Parse(sInput[i], NumberStyles.HexNumber);
-                }
-
-                DESCryptoServiceProvider DES = new DESCryptoServiceProvider();
-                DES.Key = ASCIIEncoding.ASCII.GetBytes(sKey);
-                DES.IV = ASCIIEncoding.ASCII.GetBytes(sIV);
-                ICryptoTransform desencrypt = DES.CreateDecryptor();
-                byte[] result = desencrypt.TransformFinalBlock(data, 0, data.Length);
-                return Encoding.UTF8.GetString(result);
+                sKey = DateTime.Now.ToString("yyyyMMdd");
+                sIV = DateTime.Now.ToString("yyyyMMdd");
             }
-            catch { }
+            else
+            {
+                sKey = Form1.form1.textBox3.Text;
+                sIV = Form1.form1.textBox3.Text;
+            }
+            var encryptedString = RencryptedString.Substring(9);
 
+            var btKey = Encoding.UTF8.GetBytes(sKey);
+            var btIV = Encoding.UTF8.GetBytes(sIV);
+            DESCryptoServiceProvider des = new DESCryptoServiceProvider();
+            using (MemoryStream ms = new MemoryStream())
+            {
+                byte[] inData = Convert.FromBase64String(encryptedString);
+                try
+                {
+                    using (CryptoStream cs = new CryptoStream(ms, des.CreateDecryptor(btKey, btIV), CryptoStreamMode.Write))
+                    {
+                        cs.Write(inData, 0, inData.Length);
+                        cs.FlushFinalBlock();
+                    }
+                    return Encoding.UTF8.GetString(ms.ToArray());
+                }
+                catch { }
+            }
             return "Error";
         }
     }
